@@ -1,20 +1,41 @@
 import streamlit as st
 import random
 
-# Initialize session variables
+# Initialize session state
 if "current_q" not in st.session_state:
-    st.session_state.current_q = 0  # index 0 to 2
+    st.session_state.current_q = 0
 if "attempt" not in st.session_state:
     st.session_state.attempt = 0
 if "selected_option" not in st.session_state:
     st.session_state.selected_option = None
 if "show_solution" not in st.session_state:
     st.session_state.show_solution = False
+if "question" not in st.session_state:
+    st.session_state.question = None
+if "go_next" not in st.session_state:
+    st.session_state.go_next = False
 
-# ----------------------------- #
-# Fixed 3-question types
-# ----------------------------- #
+# Handle navigation logic without rerun error
+if st.session_state.go_next:
+    st.session_state.current_q += 1
+    st.session_state.attempt = 0
+    st.session_state.selected_option = None
+    st.session_state.show_solution = False
+    st.session_state.go_next = False
+    if st.session_state.current_q < 3:
+        st.session_state.question = None
 
+# Generate distractors
+def generate_distractors(correct, rounding=False):
+    distractors = set()
+    while len(distractors) < 4:
+        offset = random.choice([-20, -10, 10, 20]) if rounding else random.randint(-10, 10)
+        option = correct + offset
+        if option != correct and option > 0:
+            distractors.add(option)
+    return list(distractors)
+
+# Define fixed questions
 def generate_add_three_numbers():
     nums = [random.randint(10, 20) for _ in range(3)]
     correct_answer = sum(nums)
@@ -59,19 +80,7 @@ def generate_rounding_question():
         "solution": solution
     }
 
-def generate_distractors(correct, rounding=False):
-    distractors = set()
-    while len(distractors) < 4:
-        offset = random.choice([-20, -10, 10, 20]) if rounding else random.randint(-10, 10)
-        option = correct + offset
-        if option != correct and option > 0:
-            distractors.add(option)
-    return list(distractors)
-
-# ----------------------------- #
-# Question Flow Control
-# ----------------------------- #
-
+# Get question based on index
 def get_question_by_index(index):
     if index == 0:
         return generate_add_three_numbers()
@@ -80,57 +89,47 @@ def get_question_by_index(index):
     elif index == 2:
         return generate_rounding_question()
 
-# Get current question
-if "question" not in st.session_state:
-    st.session_state.question = get_question_by_index(st.session_state.current_q)
-    random.shuffle(st.session_state.question["options"])
+# Load current question
+if st.session_state.current_q < 3:
+    if not st.session_state.question:
+        st.session_state.question = get_question_by_index(st.session_state.current_q)
+        random.shuffle(st.session_state.question["options"])
 
-# UI
-st.title("🎯 Math Mania - 3 Question Quiz")
+    q = st.session_state.question
 
-q = st.session_state.question
-st.subheader(f"Question {st.session_state.current_q + 1}")
-st.write(q["stem"])
+    st.title("🎯 Math Mania - 3 Question Quiz")
+    st.subheader(f"Question {st.session_state.current_q + 1} of 3")
+    st.write(q["stem"])
 
-# Option select
-selected = st.radio("Choose your answer:", q["options"], index=None, key=f"q_{st.session_state.current_q}")
+    selected = st.radio("Choose your answer:", q["options"], index=None, key=f"q_{st.session_state.current_q}")
 
-if st.button("✅ Submit Answer"):
-    st.session_state.selected_option = selected
-    if selected == q["correct"]:
-        st.success("Correct! 🎉")
-        st.session_state.attempt = 0
-        st.session_state.show_solution = False
-        if st.session_state.current_q < 2:
-            if st.button("➡️ Next"):
-                st.session_state.current_q += 1
-                st.session_state.question = get_question_by_index(st.session_state.current_q)
-                random.shuffle(st.session_state.question["options"])
-                st.experimental_rerun()
-        else:
-            st.balloons()
-            st.success("🎉 You've completed all 3 questions! Great job!")
-    else:
-        st.session_state.attempt += 1
-        if st.session_state.attempt == 1:
-            st.warning("Oops! Try again 💡")
-            st.info("Hint: " + q["hint"])
-        else:
-            st.error("Incorrect again ❌")
-            st.session_state.show_solution = True
-
-# Show solution after 2nd wrong attempt
-if st.session_state.show_solution:
-    with st.expander("📘 Step-by-Step Solution"):
-        st.markdown(q["solution"], unsafe_allow_html=True)
-    if st.session_state.current_q < 2:
-        if st.button("➡️ Next Question"):
-            st.session_state.current_q += 1
-            st.session_state.question = get_question_by_index(st.session_state.current_q)
-            st.session_state.attempt = 0
+    if st.button("✅ Submit Answer"):
+        st.session_state.selected_option = selected
+        if selected == q["correct"]:
+            st.success("Correct! 🎉")
             st.session_state.show_solution = False
-            st.experimental_rerun()
-    else:
-        st.balloons()
-        st.success("🎉 You've completed all 3 questions! Well done!")
+        else:
+            st.session_state.attempt += 1
+            if st.session_state.attempt == 1:
+                st.warning("Oops! Try again 💡")
+                st.info("Hint: " + q["hint"])
+            else:
+                st.error("Incorrect again ❌")
+                st.session_state.show_solution = True
 
+    if st.session_state.selected_option == q["correct"]:
+        if st.button("➡️ Next"):
+            st.session_state.go_next = True
+            st.experimental_rerun()
+
+    if st.session_state.show_solution:
+        with st.expander("📘 Step-by-Step Solution"):
+            st.markdown(q["solution"], unsafe_allow_html=True)
+        if st.button("➡️ Next Question"):
+            st.session_state.go_next = True
+            st.experimental_rerun()
+
+else:
+    st.title("🎉 You've completed all 3 questions!")
+    st.balloons()
+    st.success("Great job! You’ve reached the end of this Math Mania session.")

@@ -110,7 +110,7 @@ if st.session_state.current_q < 3:
             st.session_state.attempt = 0
             st.session_state.selected_option = None
             st.session_state.show_solution = False
-            st.experimental_set_query_params()  # Reset UI state
+            st.query_params.clear()  # ✅ updated line
 
 else:
     st.title("🎉 You've completed all 3 questions!")

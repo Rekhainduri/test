@@ -1,7 +1,7 @@
 import streamlit as st
 import random
 
-# Initialize session state
+# Initialize session state variables
 if "current_q" not in st.session_state:
     st.session_state.current_q = 0
 if "attempt" not in st.session_state:
@@ -11,7 +11,7 @@ if "selected_option" not in st.session_state:
 if "question_bank" not in st.session_state:
     st.session_state.question_bank = []
 
-# Generate distractors
+# Generate distractors helper
 def generate_distractors(correct, rounding=False):
     distractors = set()
     while len(distractors) < 4:
@@ -24,15 +24,19 @@ def generate_distractors(correct, rounding=False):
             distractors.add(option)
     return list(distractors)
 
-# Question generators
+# Question generators with detailed steps for 2nd graders
 def generate_add_three_numbers():
     nums = [random.randint(10, 20) for _ in range(3)]
     correct_answer = sum(nums)
     distractors = generate_distractors(correct_answer)
     hint = "Add the first two numbers, then add the third."
     solution = (
-        f"Step 1: {nums[0]} + {nums[1]} = {nums[0] + nums[1]}\n"
-        f"Step 2: {nums[0] + nums[1]} + {nums[2]} = {correct_answer}"
+        f"Let's add the numbers step by step:\n\n"
+        f"1️⃣ First, add {nums[0]} and {nums[1]}:\n"
+        f"   {nums[0]} + {nums[1]} = {nums[0] + nums[1]}\n\n"
+        f"2️⃣ Now, add the third number {nums[2]} to the result:\n"
+        f"   {nums[0] + nums[1]} + {nums[2]} = {correct_answer}\n\n"
+        f"So, the answer is {correct_answer}."
     )
     return {
         "stem": f"What is {nums[0]} + {nums[1]} + {nums[2]}?",
@@ -48,7 +52,12 @@ def generate_multiplication_question():
     correct_answer = base * multiplier
     distractors = generate_distractors(correct_answer)
     hint = f"Multiply {base} by {multiplier}."
-    solution = f"{base} × {multiplier} = {correct_answer}"
+    solution = (
+        f"Let's multiply step by step:\n\n"
+        f"1️⃣ Multiply {base} by {multiplier}:\n"
+        f"   {base} × {multiplier} = {correct_answer}\n\n"
+        f"So, the answer is {correct_answer}."
+    )
     return {
         "stem": f"What is {base} × {multiplier}?",
         "options": distractors + [correct_answer],
@@ -61,8 +70,15 @@ def generate_rounding_question():
     num = random.randint(51, 149)
     rounded = round(num / 10) * 10
     distractors = generate_distractors(rounded, rounding=True)
-    hint = "If the digit in the ones place is 5 or more, round up."
-    solution = f"{num} rounds to {rounded} because the ones digit is {num % 10}."
+    hint = "Look at the ones digit to decide if you round up or down."
+    solution = (
+        f"Let's round {num} to the nearest ten step by step:\n\n"
+        f"1️⃣ Look at the ones digit (the last digit): {num % 10}\n\n"
+        f"2️⃣ If the ones digit is 5 or more, we round up.\n"
+        f"   Otherwise, we round down.\n\n"
+        f"3️⃣ Since the ones digit is {num % 10}, we {'round up' if (num % 10) >= 5 else 'round down'}.\n\n"
+        f"4️⃣ So, {num} rounded to the nearest ten is {rounded}."
+    )
     return {
         "stem": f"Round {num} to the nearest ten.",
         "options": distractors + [rounded],
@@ -97,7 +113,7 @@ if st.session_state.current_q < 3:
         else:
             st.session_state.attempt += 1
             if st.session_state.attempt == 1:
-                st.warning("Incorrect. Here's a hint:")
+                st.warning("Oops, that's not quite right. Here's a hint to help you:")
                 st.info(q["hint"])
 
     # Logic for next steps after answer submission
@@ -108,18 +124,18 @@ if st.session_state.current_q < 3:
             st.session_state.current_q += 1
             st.session_state.attempt = 0
             st.session_state.selected_option = None
-            st.query_params.clear()
+            st.experimental_set_query_params()  # Clear query params
 
     elif st.session_state.attempt >= 2:
-        # After two wrong attempts show solution automatically
-        st.error("Incorrect again. Here's the solution:")
+        # After two wrong attempts show detailed solution
+        st.error("Let's go through the steps to find the answer:")
         with st.expander("📘 Step-by-Step Solution", expanded=True):
             st.markdown(q["solution"])
         if st.button("➡️ Next Question"):
             st.session_state.current_q += 1
             st.session_state.attempt = 0
             st.session_state.selected_option = None
-            st.query_params.clear()
+            st.experimental_set_query_params()  # Clear query params
 
 else:
     st.title("🎉 You've completed all 3 questions!")

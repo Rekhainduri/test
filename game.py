@@ -1,9 +1,7 @@
 import streamlit as st
-import random
 
 st.set_page_config(page_title="🧠 Math Mania", page_icon="🧠")
 
-# Questions as per your specs
 questions = [
     {
         "question": "Add these three numbers: 12 + 15 + 18",
@@ -47,13 +45,11 @@ Let's round step by step:
 
 3️⃣ So, 74 rounded to the nearest 10 is 70.
 """
-    },
+    }
 ]
-
 
 def main():
     st.title("🧠 Math Mania")
-    total_questions = len(questions)
 
     if "current_q" not in st.session_state:
         st.session_state.current_q = 0
@@ -62,28 +58,24 @@ def main():
     if "selected_option" not in st.session_state:
         st.session_state.selected_option = None
 
-    if st.session_state.current_q < total_questions:
+    total_q = len(questions)
+
+    if st.session_state.current_q < total_q:
         q = questions[st.session_state.current_q]
 
-        st.write(f"Question {st.session_state.current_q + 1} of {total_questions}")
+        st.write(f"Question {st.session_state.current_q + 1} of {total_q}")
         st.write(q["question"])
 
-        # Show options as radio buttons
         st.session_state.selected_option = st.radio(
-            "Choose your answer:", q["options"], index=0, key="option"
+            "Choose your answer:", q["options"], key="answer_radio"
         )
 
-        submit = st.button("Submit Answer")
-
-        if submit:
-            # Increase attempt count only when Submit clicked
+        if st.button("Submit Answer"):
             st.session_state.attempt += 1
 
             if st.session_state.selected_option == q["correct"]:
                 st.success("Correct! 🎉")
-
-                # Reset attempt count for next question
-                st.session_state.attempt = 0
+                st.session_state.attempt = 0  # reset attempts
 
                 if st.button("➡️ Next Question"):
                     st.session_state.current_q += 1
@@ -91,7 +83,6 @@ def main():
                     st.experimental_rerun()
 
             else:
-                # Wrong answer flow
                 if st.session_state.attempt == 1:
                     st.warning(f"Oops! That's not right. Hint: {q['hint']}")
                 elif st.session_state.attempt == 2:

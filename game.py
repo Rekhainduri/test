@@ -1,110 +1,143 @@
 import streamlit as st
+import random
 
-st.set_page_config(page_title="🧠 Math Mania", page_icon="🧠")
+# Initialize session state variables
+if "current_q" not in st.session_state:
+    st.session_state.current_q = 0
+if "attempt" not in st.session_state:
+    st.session_state.attempt = 0
+if "selected_option" not in st.session_state:
+    st.session_state.selected_option = None
+if "question_bank" not in st.session_state:
+    st.session_state.question_bank = []
 
-questions = [
-    {
-        "question": "Add these three numbers: 12 + 15 + 18",
-        "options": [45, 43, 44, 46, 42],
-        "correct": 45,
-        "hint": "Try adding two numbers first, then add the third number.",
-        "solution": """
-Let's add step by step:
+# Generate distractors helper
+def generate_distractors(correct, rounding=False):
+    distractors = set()
+    while len(distractors) < 4:
+        if rounding:
+            offset = random.choice([-20, -10, 10, 20])
+        else:
+            offset = random.randint(-10, 10)
+        option = correct + offset
+        if option != correct and option > 0:
+            distractors.add(option)
+    return list(distractors)
 
-1️⃣ Add 12 and 15: 12 + 15 = 27
-
-2️⃣ Now add 18 to 27: 27 + 18 = 45
-
-So, the answer is 45.
-"""
-    },
-    {
-        "question": "What is 2 × 6?",
-        "options": [9, 13, 22, 12, 7],
-        "correct": 12,
-        "hint": "Multiplying means adding the same number multiple times. Think of 2 groups of 6 or 6 groups of 2.",
-        "solution": """
-Let's multiply step by step:
-
-1️⃣ Multiply 2 by 6: 2 × 6 = 12
-
-So, the answer is 12.
-"""
-    },
-    {
-        "question": "Round 74 to the nearest 10.",
-        "options": [70, 80, 75, 65, 60],
-        "correct": 70,
-        "hint": "Look at the ones digit. If it is 5 or more, round up. Otherwise, round down.",
-        "solution": """
-Let's round step by step:
-
-1️⃣ Look at the ones digit in 74, which is 4.
-
-2️⃣ Since 4 is less than 5, we round down.
-
-3️⃣ So, 74 rounded to the nearest 10 is 70.
-"""
+# Question generators with detailed steps for 2nd graders
+def generate_add_three_numbers():
+    nums = [random.randint(10, 20) for _ in range(3)]
+    correct_answer = sum(nums)
+    distractors = generate_distractors(correct_answer)
+    hint = "Add the first two numbers, then add the third."
+    solution = (
+        f"Let's add the numbers step by step:\n\n"
+        f"1️⃣ First, add {nums[0]} and {nums[1]}:\n"
+        f"   {nums[0]} + {nums[1]} = {nums[0] + nums[1]}\n\n"
+        f"2️⃣ Now, add the third number {nums[2]} to the result:\n"
+        f"   {nums[0] + nums[1]} + {nums[2]} = {correct_answer}\n\n"
+        f"So, the answer is {correct_answer}."
+    )
+    return {
+        "stem": f"What is {nums[0]} + {nums[1]} + {nums[2]}?",
+        "options": distractors + [correct_answer],
+        "correct": correct_answer,
+        "hint": hint,
+        "solution": solution,
     }
-]
 
-def main():
+def generate_multiplication_question():
+    base = random.randint(2, 12)
+    multiplier = random.choice([3, 6])
+    correct_answer = base * multiplier
+    distractors = generate_distractors(correct_answer)
+    hint = f"Multiply {base} by {multiplier}."
+    solution = (
+        f"Let's multiply step by step:\n\n"
+        f"1️⃣ Multiply {base} by {multiplier}:\n"
+        f"   {base} × {multiplier} = {correct_answer}\n\n"
+        f"So, the answer is {correct_answer}."
+    )
+    return {
+        "stem": f"What is {base} × {multiplier}?",
+        "options": distractors + [correct_answer],
+        "correct": correct_answer,
+        "hint": hint,
+        "solution": solution,
+    }
+
+def generate_rounding_question():
+    num = random.randint(51, 149)
+    rounded = round(num / 10) * 10
+    distractors = generate_distractors(rounded, rounding=True)
+    hint = "Look at the ones digit to decide if you round up or down."
+    solution = (
+        f"Let's round {num} to the nearest ten step by step:\n\n"
+        f"1️⃣ Look at the ones digit (the last digit): {num % 10}\n\n"
+        f"2️⃣ If the ones digit is 5 or more, we round up.\n"
+        f"   Otherwise, we round down.\n\n"
+        f"3️⃣ Since the ones digit is {num % 10}, we {'round up' if (num % 10) >= 5 else 'round down'}.\n\n"
+        f"4️⃣ So, {num} rounded to the nearest ten is {rounded}."
+    )
+    return {
+        "stem": f"Round {num} to the nearest ten.",
+        "options": distractors + [rounded],
+        "correct": rounded,
+        "hint": hint,
+        "solution": solution,
+    }
+
+# Load question bank once
+if not st.session_state.question_bank:
+    st.session_state.question_bank.append(generate_add_three_numbers())
+    st.session_state.question_bank.append(generate_multiplication_question())
+    st.session_state.question_bank.append(generate_rounding_question())
+
+# Display current question
+if st.session_state.current_q < 3:
+    q = st.session_state.question_bank[st.session_state.current_q]
+    if "shuffled_options" not in q:
+        q["shuffled_options"] = q["options"].copy()
+        random.shuffle(q["shuffled_options"])
+
     st.title("🧠 Math Mania")
+    st.subheader(f"Question {st.session_state.current_q + 1} of 3")
+    st.write(q["stem"])
 
-    if "current_q" not in st.session_state:
-        st.session_state.current_q = 0
-    if "attempt" not in st.session_state:
-        st.session_state.attempt = 0
-    if "selected_option" not in st.session_state:
-        st.session_state.selected_option = None
+    selected = st.radio("Choose your answer:", q["shuffled_options"], key=f"q_{st.session_state.current_q}")
 
-    total_q = len(questions)
-
-    if st.session_state.current_q < total_q:
-        q = questions[st.session_state.current_q]
-
-        st.write(f"Question {st.session_state.current_q + 1} of {total_q}")
-        st.write(q["question"])
-
-        st.session_state.selected_option = st.radio(
-            "Choose your answer:", q["options"], key="answer_radio"
-        )
-
-        if st.button("Submit Answer"):
+    if st.button("✅ Submit Answer"):
+        st.session_state.selected_option = selected
+        if selected == q["correct"]:
+            st.success("Correct! 🎉")
+        else:
             st.session_state.attempt += 1
+            if st.session_state.attempt == 1:
+                st.warning("Oops, that's not quite right. Here's a hint to help you:")
+                st.info(q["hint"])
 
-            if st.session_state.selected_option == q["correct"]:
-                st.success("Correct! 🎉")
-                st.session_state.attempt = 0  # reset attempts
-
-                if st.button("➡️ Next Question"):
-                    st.session_state.current_q += 1
-                    st.session_state.selected_option = None
-                    st.experimental_rerun()
-
-            else:
-                if st.session_state.attempt == 1:
-                    st.warning(f"Oops! That's not right. Hint: {q['hint']}")
-                elif st.session_state.attempt == 2:
-                    st.error("Let's go through the steps to find the answer:")
-                    with st.expander("📘 Step-by-Step Solution", expanded=True):
-                        st.markdown(q["solution"])
-                    if st.button("➡️ Next Question"):
-                        st.session_state.current_q += 1
-                        st.session_state.attempt = 0
-                        st.session_state.selected_option = None
-                        st.experimental_rerun()
-
-    else:
-        st.balloons()
-        st.success("🎉 Congratulations! You completed all questions!")
-
-        if st.button("Restart Quiz"):
-            st.session_state.current_q = 0
+    # Logic for next steps after answer submission
+    if st.session_state.selected_option == q["correct"]:
+        # Correct answer path
+        st.success("Correct! 🎉")
+        if st.button("➡️ Next Question"):
+            st.session_state.current_q += 1
             st.session_state.attempt = 0
             st.session_state.selected_option = None
-            st.experimental_rerun()
+            st.experimental_set_query_params()  # Clear query params
 
+    elif st.session_state.attempt >= 2:
+        # After two wrong attempts show detailed solution
+        st.error("Let's go through the steps to find the answer:")
+        with st.expander("📘 Step-by-Step Solution", expanded=True):
+            st.markdown(q["solution"])
+        if st.button("➡️ Next Question"):
+            st.session_state.current_q += 1
+            st.session_state.attempt = 0
+            st.session_state.selected_option = None
+            st.experimental_set_query_params()  # Clear query params
 
-if __name__ == "__main__":
-    main()
+else:
+    st.title("🎉 You've completed all 3 questions!")
+    st.success("Great work! You finished Math Mania.")
+    st.balloons()

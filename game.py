@@ -8,8 +8,6 @@ if "attempt" not in st.session_state:
     st.session_state.attempt = 0
 if "selected_option" not in st.session_state:
     st.session_state.selected_option = None
-if "show_solution" not in st.session_state:
-    st.session_state.show_solution = False
 if "question_bank" not in st.session_state:
     st.session_state.question_bank = []
 
@@ -17,26 +15,31 @@ if "question_bank" not in st.session_state:
 def generate_distractors(correct, rounding=False):
     distractors = set()
     while len(distractors) < 4:
-        offset = random.choice([-20, -10, 10, 20]) if rounding else random.randint(-10, 10)
+        if rounding:
+            offset = random.choice([-20, -10, 10, 20])
+        else:
+            offset = random.randint(-10, 10)
         option = correct + offset
         if option != correct and option > 0:
             distractors.add(option)
     return list(distractors)
 
-# Define fixed questions
+# Question generators
 def generate_add_three_numbers():
     nums = [random.randint(10, 20) for _ in range(3)]
     correct_answer = sum(nums)
     distractors = generate_distractors(correct_answer)
     hint = "Add the first two numbers, then add the third."
-    solution = f"Step 1: {nums[0]} + {nums[1]} = {nums[0] + nums[1]}  \n" \
-               f"Step 2: {nums[0] + nums[1]} + {nums[2]} = {correct_answer}"
+    solution = (
+        f"Step 1: {nums[0]} + {nums[1]} = {nums[0] + nums[1]}\n"
+        f"Step 2: {nums[0] + nums[1]} + {nums[2]} = {correct_answer}"
+    )
     return {
         "stem": f"What is {nums[0]} + {nums[1]} + {nums[2]}?",
         "options": distractors + [correct_answer],
         "correct": correct_answer,
         "hint": hint,
-        "solution": solution
+        "solution": solution,
     }
 
 def generate_multiplication_question():
@@ -51,21 +54,21 @@ def generate_multiplication_question():
         "options": distractors + [correct_answer],
         "correct": correct_answer,
         "hint": hint,
-        "solution": solution
+        "solution": solution,
     }
 
 def generate_rounding_question():
     num = random.randint(51, 149)
     rounded = round(num / 10) * 10
     distractors = generate_distractors(rounded, rounding=True)
-    hint = "If the digit in ones place is 5 or more, round up."
+    hint = "If the digit in the ones place is 5 or more, round up."
     solution = f"{num} rounds to {rounded} because the ones digit is {num % 10}."
     return {
         "stem": f"Round {num} to the nearest ten.",
         "options": distractors + [rounded],
         "correct": rounded,
         "hint": hint,
-        "solution": solution
+        "solution": solution,
     }
 
 # Load question bank once
@@ -78,7 +81,7 @@ if not st.session_state.question_bank:
 if st.session_state.current_q < 3:
     q = st.session_state.question_bank[st.session_state.current_q]
     if "shuffled_options" not in q:
-        q["shuffled_options"] = q["options"]
+        q["shuffled_options"] = q["options"].copy()
         random.shuffle(q["shuffled_options"])
 
     st.title("🧠 Math Mania")
@@ -96,21 +99,27 @@ if st.session_state.current_q < 3:
             if st.session_state.attempt == 1:
                 st.warning("Incorrect. Here's a hint:")
                 st.info(q["hint"])
-            else:
-                st.error("Incorrect again.")
-                st.session_state.show_solution = True
 
-    # If answer correct or solution shown, show Next button
-    if (st.session_state.selected_option == q["correct"]) or st.session_state.show_solution:
-        if st.session_state.show_solution:
-            with st.expander("📘 Step-by-Step Solution"):
-                st.markdown(q["solution"])
+    # Logic for next steps after answer submission
+    if st.session_state.selected_option == q["correct"]:
+        # Correct answer path
+        st.success("Correct! 🎉")
         if st.button("➡️ Next Question"):
             st.session_state.current_q += 1
             st.session_state.attempt = 0
             st.session_state.selected_option = None
-            st.session_state.show_solution = False
-            st.query_params.clear()  # ✅ updated line
+            st.query_params.clear()
+
+    elif st.session_state.attempt >= 2:
+        # After two wrong attempts show solution automatically
+        st.error("Incorrect again. Here's the solution:")
+        with st.expander("📘 Step-by-Step Solution", expanded=True):
+            st.markdown(q["solution"])
+        if st.button("➡️ Next Question"):
+            st.session_state.current_q += 1
+            st.session_state.attempt = 0
+            st.session_state.selected_option = None
+            st.query_params.clear()
 
 else:
     st.title("🎉 You've completed all 3 questions!")

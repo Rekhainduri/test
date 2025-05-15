@@ -124,7 +124,7 @@ if st.session_state.current_q < 3:
             st.session_state.current_q += 1
             st.session_state.attempt = 0
             st.session_state.selected_option = None
-            st.experimental_set_query_params()  # Clear query params
+            st.query_params = {}  # Clear query params
 
     elif st.session_state.attempt >= 2:
         # After two wrong attempts show detailed solution
@@ -135,7 +135,7 @@ if st.session_state.current_q < 3:
             st.session_state.current_q += 1
             st.session_state.attempt = 0
             st.session_state.selected_option = None
-            st.experimental_set_query_params()  # Clear query params
+            st.query_params = {}  # Clear query params
 
 else:
     st.title("🎉 You've completed all 3 questions!")

@@ -1,122 +1,94 @@
-import random
 import streamlit as st
+import random
+import logging
 
-# -----------------------------
-# Question Generators
-# -----------------------------
-def generate_addition_question():
-    numbers = [random.randint(10, 20) for _ in range(3)]
-    correct_answer = sum(numbers)
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+
+# Utility functions
+def generate_add_three_numbers():
+    nums = [random.randint(10, 20) for _ in range(3)]
+    correct_answer = sum(nums)
     distractors = generate_distractors(correct_answer)
-
+    hint = f"Add {nums[0]} + {nums[1]} first, then add {nums[2]}"
+    solution = f"Step 1: {nums[0]} + {nums[1]} = {nums[0] + nums[1]}\n" \
+               f"Step 2: {nums[0] + nums[1]} + {nums[2]} = {correct_answer}"
     return {
-        "type": "Addition",
-        "question": f"What is {numbers[0]} + {numbers[1]} + {numbers[2]}?",
-        "correct_answer": correct_answer,
-        "distractors": distractors,
-        "hint": "First, add the first two numbers together, then add the third number.",
-        "solution": (
-            f"Step 1: {numbers[0]} + {numbers[1]} = {numbers[0] + numbers[1]}\n"
-            f"Step 2: {numbers[0] + numbers[1]} + {numbers[2]} = {correct_answer}\n"
-            f"Answer: {correct_answer}"
-        )
+        "stem": f"What is {nums[0]} + {nums[1]} + {nums[2]}?",
+        "options": distractors + [correct_answer],
+        "correct": correct_answer,
+        "hint": hint,
+        "solution": solution
     }
 
 def generate_multiplication_question():
+    base = random.randint(2, 12)
     multiplier = random.choice([3, 6])
-    number = random.randint(2, 12)
-    correct_answer = number * multiplier
+    correct_answer = base * multiplier
     distractors = generate_distractors(correct_answer)
-
+    hint = f"Think of {base} groups of {multiplier}"
+    solution = f"{base} × {multiplier} = {correct_answer}"
     return {
-        "type": "Multiplication",
-        "question": f"What is {number} × {multiplier}?",
-        "correct_answer": correct_answer,
-        "distractors": distractors,
-        "hint": f"Think about {multiplier} groups of {number}.",
-        "solution": (
-            f"Step 1: Multiply {number} × {multiplier} = {correct_answer}\n"
-            f"Answer: {correct_answer}"
-        )
+        "stem": f"What is {base} × {multiplier}?",
+        "options": distractors + [correct_answer],
+        "correct": correct_answer,
+        "hint": hint,
+        "solution": solution
     }
 
 def generate_rounding_question():
-    number = random.randint(21, 99)
-    correct_answer = round(number / 10) * 10
-    distractors = generate_distractors(correct_answer, rounding=True)
-
+    num = random.randint(51, 149)
+    rounded = round(num / 10) * 10
+    distractors = generate_distractors(rounded, rounding=True)
+    hint = "Look at the digit in the ones place. If it's 5 or more, round up."
+    solution = f"{num} rounds to {rounded} because the ones digit is {num % 10}."
     return {
-        "type": "Rounding",
-        "question": f"Round {number} to the nearest 10.",
-        "correct_answer": correct_answer,
-        "distractors": distractors,
-        "hint": "Look at the ones place. If it's 5 or more, round up; else, round down.",
-        "solution": (
-            f"Step 1: Ones digit of {number} is {number % 10}\n"
-            f"Step 2: Round to {correct_answer}\n"
-            f"Answer: {correct_answer}"
-        )
+        "stem": f"Round {num} to the nearest ten.",
+        "options": distractors + [rounded],
+        "correct": rounded,
+        "hint": hint,
+        "solution": solution
     }
 
-# -----------------------------
-# Distractor Generator
-# -----------------------------
-def generate_distractors(correct_answer, rounding=False):
+def generate_distractors(correct, rounding=False):
     distractors = set()
-    attempts = 0
-    while len(distractors) < 4 and attempts < 100:
-        offset = random.choice([-15, -10, -5, 5, 10, 15])
-        candidate = correct_answer + offset
+    while len(distractors) < 4:
         if rounding:
-            candidate = round(candidate / 10) * 10
-        if candidate != correct_answer:
-            distractors.add(candidate)
-        attempts += 1
+            offset = random.choice([-20, -10, 10, 20])
+            option = correct + offset
+        else:
+            offset = random.randint(-10, 10)
+            option = correct + offset
+        if option != correct and option >= 0:
+            distractors.add(option)
     return list(distractors)
 
-# -----------------------------
-# Streamlit UI Logic
-# -----------------------------
-def ask_question(question_data, question_key):
-    st.subheader(f"📘 {question_data['question']}")
-    
-    options = question_data["distractors"] + [question_data["correct_answer"]]
-    random.shuffle(options)
+# App layout
+st.set_page_config(page_title="Math Mania - Initial Assignment", layout="centered")
+st.title("🎯 Math Mania - Initial Assignment Questions")
 
-    lettered_options = {chr(65 + i): option for i, option in enumerate(options)}
-    
-    selected = st.radio("Choose your answer:", list(lettered_options.keys()), key=f"{question_key}_choice", index=0)
+question_type = st.selectbox("Select Question Type", [
+    "Add Three Numbers (10-20)",
+    "Multiply by 3 or 6",
+    "Round to Nearest 10"
+])
 
-    # Show options as A, B, C, D, E
-    for i, option in enumerate(options):
-        st.write(f"{chr(65 + i)}: {option}")
+if st.button("Generate Question"):
+    if question_type == "Add Three Numbers (10-20)":
+        q = generate_add_three_numbers()
+    elif question_type == "Multiply by 3 or 6":
+        q = generate_multiplication_question()
+    elif question_type == "Round to Nearest 10":
+        q = generate_rounding_question()
+    else:
+        st.error("Unknown question type.")
+        q = None
 
-    # Handle the submit and response
-    if st.button("Submit", key=f"{question_key}_submit"):
-        chosen_value = lettered_options[selected]
-        if chosen_value == question_data["correct_answer"]:
-            st.success("✅ Correct!")
-        else:
-            st.error(f"❌ Incorrect. Hint: {question_data['hint']}")
-            if st.button("Show Solution", key=f"{question_key}_solution"):
-                st.info(f"➡ Solution:\n{question_data['solution']}")
-
-# -----------------------------
-# Main Streamlit App
-# -----------------------------
-def main():
-    st.title("🧠 Interactive Math Quiz")
-    st.write("Answer the following questions:")
-
-    question_generators = [
-        generate_addition_question,
-        generate_multiplication_question,
-        generate_rounding_question
-    ]
-
-    for i, generate in enumerate(question_generators):
-        q_data = generate()
-        ask_question(q_data, f"q{i}")
-
-if __name__ == "__main__":
-    main()
+    if q:
+        random.shuffle(q["options"])
+        st.subheader("📝 Question:")
+        st.write(q["stem"])
+        st.radio("Choose your answer:", q["options"], key="options")
+        st.info("💡 Hint: " + q["hint"])
+        with st.expander("📘 Show Solution"):
+            st.markdown(q["solution"])
